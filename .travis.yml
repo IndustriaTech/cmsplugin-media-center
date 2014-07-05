@@ -1,0 +1,22 @@
+language: python
+
+branches:
+  only:
+    - master
+
+python:
+  - "2.7"
+
+env:
+  - CMS=cms3_0_X
+  - CMS=cms2_4_X
+
+install:
+  - pip install -r "example/requirements/$CMS.txt"
+  - pip install -r "example/requirements/travis_additions.txt"
+
+script:
+  - coverage run ./example/manage.py test cmsplugin_media_center --settings=example.settings.$CMS
+
+after_success:
+  coveralls

@@ -1,0 +1,42 @@
+{% load mptt_tags thumbnail i18n %}
+
+{{ category }} <br/>
+
+{% if photo_list %}<h2>{% trans 'Folders' %}</h2>{% endif %}
+<div class="row">
+  {% for category in category_list %}
+     <div class="col-xs-6 col-sm-3 col-md-3">
+        <p><strong>{{ category }}</strong></p>
+        <a href="{% url 'picture_category' category.slug %}" class="thumbnail">
+           <img src="{% thumbnail category.get_cover.image 200x200 %}" alt="{{ category }} thumbnail">
+        </a>
+        <div>{{ category.description }}</div>
+     </div>
+     {% if forloop.counter|divisibleby:"4" %}
+      <!-- Add the extra clearfix for only the required viewport -->
+      <div class="clearfix visible-xs-block"></div>
+      <hr/>
+     {% endif %}
+  {% endfor %}
+</div>
+
+<br/>
+
+{% if photo_list %}<h2>{% trans 'Photographs' %}</h2>{% endif %}
+<div class="row">
+  {% for photo in photo_list %}
+      <div class="col-xs-6 col-sm-3 col-md-3">
+        <p>{{ photo }}</p>
+         <a href="{{ photo.image.url }}" class="thumbnail" data-lightbox="{{ category.slug }}" data-title="photo.image.title">
+            <img src="{% thumbnail photo.image 200x200 %}"
+            alt="{{ category }} thumbnail">
+         </a>
+         <div>{{ photo.description }}</div>
+         {% if forloop.counter|divisibleby:"4" %}
+          <!-- Add the extra clearfix for only the required viewport -->
+          <div class="clearfix visible-xs-block"></div>
+          <hr/>
+         {% endif %}
+      </div>
+  {% endfor %}
+</div>

@@ -1,0 +1,37 @@
+{% load mptt_tags thumbnail i18n %}
+
+{{ category }} <br/>
+
+<div class="row">
+  <div class="col-md-4">
+    {% if category_list %}
+      <ul class="tree">
+        {% recursetree category_list %}
+        <li>
+          <a href='{% url "picture_category" node.slug %}' class="list-group-item {% if category == node %}active{% endif %}">{{ node.title }}</a>
+          {% if not node.is_leaf_node %}
+            <ul class="children">
+              {{ children }}
+            </ul>
+          {% endif %}
+        </li>
+        {% endrecursetree %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="col-md-8">
+  {% for photo in photo_list %}
+    <li>
+      <h1>{{ photo.title }}</h1>
+      <a href="{{ photo.image.url }}" data-lightbox="{{ category.slug }}" data-title="photo.image.title">
+      <img src="{% thumbnail photo.image 200x200 %}" />
+      </a>
+      <br>
+      <p>{{ photo.description }}</p>
+    </li>
+  {% empty %}
+    {% trans 'No pictures found in this folder' %}
+  {% endfor %}
+    </div>
+</div>

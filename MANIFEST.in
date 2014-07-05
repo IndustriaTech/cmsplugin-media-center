@@ -1,0 +1,8 @@
+include LICENSE
+include README.md
+recursive-include cmsplugin_media_center/migrations *
+recursive-include cmsplugin_media_center/south_migrations *
+recursive-include cmsplugin_media_center/templates *
+
+exclude cmsplugin_media_center/tests.py
+recursive-exclude cmsplugin_media_center/fixtures *

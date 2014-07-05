@@ -1,0 +1,4 @@
+Django==1.5.8
+django-cms==2.4.3
+cmsplugin-filer==0.9.9
+git+git://github.com/MagicSolutions/django-orderedmodel.git

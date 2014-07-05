@@ -1,0 +1,26 @@
+{% load staticfiles cms_tags sekizai_tags %}
+<!DOCTYPE html>
+
+<head>
+<title>CMSPlugin Media Center</title>
+
+<link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
+<link rel="stylesheet" href="{% static 'css/lightbox.css' %}" />
+<script type="text/javascript" src="{% static 'js/jquery-1.11.1.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/lightbox.min.js' %}"></script>
+
+{% render_block "css" %}
+{% render_block "js" %}
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+<body>
+  {% cms_toolbar %}
+
+  {% placeholder "media" %}
+
+</body>
+</html>

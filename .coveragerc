@@ -2,18 +2,23 @@
 [run]
 branch = True
 source = cmsplugin_media_center
+
 omit = cmsplugin_media_center/south_migrations/*
        cmsplugin_media_center/migrations/*
        cmsplugin_media_center/utils/*
        cmsplugin_media_center/admin.py
        cmsplugin_media_center/cms_app.py
        cmsplugin_media_center/tests.py
+       cmsplugin_media_center/urls.py
+       cmsplugin_media_center/cms_plugins.py
+       cmsplugin_media_center/views.py
 
 [report]
 exclude_lines =
     def __repr__
     def __unicode__
-    except PictureCategory.DoesNotExist
+    except *.DoesNotExist
+    self\._update_current_folder\(self\)
 
 # Regexes for lines to exclude from consideration
 # See documentation for further info http://nedbatchelder.com/code/coverage/config.html

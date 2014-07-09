@@ -8,9 +8,7 @@ class CMSPluginMediaCenterTests(TestCase):
     fixtures = ['auth_fixtures', 'filer_fixtures', 'media_center_fixtures']
 
     def setUp(self):
-        self.published_parent_without_pictures = PictureCategory.objects.get(pk=11)
-        self.published_parent_with_pictures = PictureCategory.objects.get(pk=3)
-        self.not_published_parent_with_published_children = PictureCategory.objects.get(pk=12)
+        pass
 
     def tearDown(self):
         pass
@@ -153,19 +151,6 @@ class CMSPluginMediaCenterTests(TestCase):
 
         inner_category.delete()
         self.assertFalse(test.is_visible)
-
-    def test_visibility_published_parent_unpublished_children(self):
-        """
-        Check visibility of published and unpublished folders with or without children and/or images.
-        """
-        is_visible = self.published_parent_without_pictures.check_visibility()
-        self.assertEqual(is_visible, False)
-
-        is_visible = self.published_parent_with_pictures.check_visibility()
-        self.assertEqual(is_visible, True)
-
-        is_visible = self.not_published_parent_with_published_children.check_visibility()
-        self.assertEqual(is_visible, False)
 
     def test_return_category_if_no_cover_pictures_exist(self):
         """
@@ -372,6 +357,80 @@ class CMSPluginMediaCenterTests(TestCase):
         inner_category.delete()
         self.assertFalse(test.is_visible)
 
+    def test_is_shown_method_self_visible_and_all_descendants_visible(self):
+        """
+        Category is_shown must return True if the category
+        is visible and all its parents are visible too
+        """
+        test = PictureCategory.objects.create(title="test",
+                                              is_published=True,
+                                              slug="test")
+        inner_category = PictureCategory.objects.create(title="inner_category",
+                                                        is_published=True,
+                                                        slug="inner-category",
+                                                        parent=test)
+        inner_inner_category = PictureCategory.objects.create(title="inner_inner_category",
+                                                              is_published=True,
+                                                              slug="inner-inner-category",
+                                                              parent=inner_category)
+        inner_inner_inner_category = PictureCategory.objects.create(
+            title="inner_inner_inner_category",
+            is_published=True,
+            slug="inner-inner-inner-category",
+            parent=inner_inner_category)
+        some_picture = Picture.objects.get(pk=1)
+        some_picture.folder = inner_inner_inner_category
+        some_picture.save()
+        self.assertTrue(all(x.is_shown() for x in [test,
+                                                   inner_category,
+                                                   inner_inner_category,
+                                                   inner_inner_inner_category]))
+
+    def test_is_shown_method_self_visible_but_some_parent_is_not_visible(self):
+        """
+        Category is_shown must return False if not all parents are visible
+        """
+        """
+        Category is_shown must return True if the category
+        is visible and all its parents are visible too
+        """
+        test = PictureCategory.objects.create(title="test",
+                                              is_published=True,
+                                              slug="test")
+        inner_category = PictureCategory.objects.create(title="inner_category",
+                                                        is_published=True,
+                                                        slug="inner-category",
+                                                        parent=test)
+        inner_inner_category = PictureCategory.objects.create(title="inner_inner_category",
+                                                              is_published=True,
+                                                              slug="inner-inner-category",
+                                                              parent=inner_category)
+        some_picture = Picture.objects.get(pk=1)
+        some_picture.folder = inner_inner_category
+        some_picture.save()
+        inner_category.is_published = False
+        inner_category.save()
+        self.assertTrue(inner_inner_category.is_visible)
+        self.assertFalse(inner_inner_category.is_shown())
+
+    def test_is_shown_method_if_self_is_not_visible(self):
+        """
+        Category is_shown method must return False if category is not visible
+        """
+        test = PictureCategory.objects.create(title="test",
+                                              is_published=True,
+                                              slug="test")
+        inner_category = PictureCategory.objects.create(title="inner_category",
+                                                        is_published=True,
+                                                        slug="inner-category",
+                                                        parent=test)
+
+        some_picture = Picture.objects.get(pk=1)
+        some_picture.folder = test
+        some_picture.save()
+        self.assertFalse(inner_category.is_visible)
+        self.assertFalse(inner_category.is_shown())
+
 
 class CMSPluginMediaCenterPictureTests(TestCase):
 
@@ -459,24 +518,168 @@ class CMSPluginMediaCenterPictureTests(TestCase):
         self.assertFalse(PictureCategory.objects.get(pk=test.pk).is_visible)
         self.assertFalse(PictureCategory.objects.get(pk=inner_category.pk).is_visible)
 
+    def test_save_brand_new_picture_in_category_must_update_category(self):
+        """
+        We have category that does not have pictuers in it. It is_visible is False.
+        We create brand new picture and attach it to this category. Category must become visible
+        """
+        test = PictureCategory.objects.create(title="test",
+                                              is_published=True,
+                                              is_visible=False,
+                                              slug="test")
+        self.assertFalse(test.is_visible)
+        from filer.models import Image
+        some_image = Image.objects.create()
+        new_picture = Picture.objects.create(folder=test, image=some_image)
+        new_picture.save()
+        self.assertTrue(test.is_visible)
+
+    def test_delete_picture_must_update_folder_adequately(self):
+        """
+        If we delete picture its folder must be resaved to adjust is_visible adequately
+        """
+        test = PictureCategory.objects.create(title="test",
+                                              is_published=True,
+                                              is_visible=False,
+                                              slug="test")
+        from filer.models import Image
+        some_image = Image.objects.create()
+        new_picture = Picture.objects.create(folder=test, image=some_image)
+        new_picture.save()
+        self.assertTrue(test.is_visible)
+        new_picture.delete()
+        self.assertFalse(test.is_visible)
+
 
 class CMSPluginMediaCenterManagerTests(TestCase):
 
     fixtures = ['auth_fixtures', 'filer_fixtures']
 
     def setUp(self):
-        pass
+        """
+        root_1
+              \
+               inner_root_1
+                            \
+                            inner_inner_root_1
+
+        root_2
+              \
+               inner_root_2
+                           \
+                            inner_inner_root_2
+
+        root_3
+        """
+
+        self.root_1 = PictureCategory.objects.create(title="root_1",
+                                                     is_published=True,
+                                                     slug="root-1")
+        self.inner_root_1 = PictureCategory.objects.create(title="inner_root_1",
+                                                           is_published=True,
+                                                           slug="inner-root-1",
+                                                           parent=self.root_1)
+        self.inner_inner_root_1 = PictureCategory.objects.create(title="inner_inner_root_1",
+                                                                 is_published=True,
+                                                                 slug="inner-inner-root-1",
+                                                                 parent=self.inner_root_1)
+        self.root_2 = PictureCategory.objects.create(title="root_2",
+                                                     is_published=True,
+                                                     slug="root-2")
+        self.inner_root_2 = PictureCategory.objects.create(title="inner_root_2",
+                                                           is_published=True,
+                                                           slug="inner-root-2",
+                                                           parent=self.root_2)
+        self.inner_inner_root_2 = PictureCategory.objects.create(title="inner_inner_root_2",
+                                                                 is_published=True,
+                                                                 slug="inner-inner-root-2",
+                                                                 parent=self.inner_root_2)
+        self.root_3 = PictureCategory.objects.create(title="root_3",
+                                                     is_published=True,
+                                                     slug="root-3")
+
+        self.all_categories = [
+            self.root_1,
+            self.inner_root_1,
+            self.inner_inner_root_1,
+            self.root_2,
+            self.inner_root_2,
+            self.inner_inner_root_2,
+            self.root_3
+        ]
+
+    def add_picture_to_every_category(self):
+        from filer.models import Image
+        some_image = Image.objects.create()
+        for category in self.all_categories:
+            Picture.objects.create(folder=category, image=some_image)
+
+    def clear_pictures_from_every_category(self):
+        fake_category = PictureCategory.objects.create(title="fake",
+                                                       is_published=True,
+                                                       slug="fake")
+        for category in self.all_categories:
+            category.pictures.update(folder=fake_category)
+
+        for picture in Picture.objects.all():
+            picture.save()
+        fake_category.delete()
 
     def tearDown(self):
         pass
+        self.clear_pictures_from_every_category()
 
+    def test_whole_tree_to_not_raise_exception_if_no_visible_category_exists(self):
+        self.assertSequenceEqual([], PictureCategory.objects.whole_tree())
 
-class CMSPluginMediaCenterPluginTests(TestCase):
+    def test_if_whole_tree_is_displaying_correctly(self):
+        self.add_picture_to_every_category()
+        self.assertSequenceEqual(self.all_categories, PictureCategory.objects.whole_tree())
 
-    fixtures = ['auth_fixtures', 'filer_fixtures']
+    def test_show_subtree_shows_whole_tree_if_no_args_provided(self):
+        self.add_picture_to_every_category()
+        self.assertSequenceEqual(self.all_categories,
+                                 PictureCategory.objects.show_subtree())
 
-    def setUp(self):
-        pass
+    def test_show_subtree_with_from_node_arg(self):
+        self.add_picture_to_every_category()
+        self.assertSequenceEqual([self.root_1,
+                                  self.inner_root_1,
+                                  self.inner_inner_root_1],
+                                 PictureCategory.objects.show_subtree(from_node=self.root_1))
 
-    def tearDown(self):
-        pass
+    def test_show_subtree_with_depth_arg_0(self):
+        self.add_picture_to_every_category()
+        self.assertSequenceEqual([self.root_1,
+                                  self.root_2,
+                                  self.root_3],
+                                 PictureCategory.objects.show_subtree(depth=0))
+
+    def test_show_subtree_with_depth_arg_provided(self):
+        self.add_picture_to_every_category()
+        self.assertSequenceEqual([self.root_1,
+                                  self.inner_root_1,
+                                  self.root_2,
+                                  self.inner_root_2,
+                                  self.root_3],
+                                 PictureCategory.objects.show_subtree(depth=1))
+
+    def test_show_subtree_with_depth_arg_and_include_self_provided(self):
+        self.add_picture_to_every_category()
+        self.assertSequenceEqual([self.inner_root_1, self.inner_root_2],
+                                 PictureCategory.objects.show_subtree(include_self=False, depth=1))
+
+    def test_get_visible(self):
+        self.add_picture_to_every_category()
+        self.assertEqual(self.root_1, PictureCategory.objects.get_visible(slug="root-1"))
+
+    def test_get_visible_when_category_not_shown_must_raise_doesnotexist(self):
+        from filer.models import Image
+        some_image = Image.objects.create()
+        picture = Picture.objects.create(folder=self.inner_root_1, image=some_image)
+        picture.save()
+        self.root_1.is_published = False
+        self.root_1.save()
+
+        with self.assertRaises(PictureCategory.DoesNotExist):
+            PictureCategory.objects.get_visible(slug=self.inner_root_1.slug)

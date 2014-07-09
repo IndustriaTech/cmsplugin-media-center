@@ -22,7 +22,10 @@ class PictureCategoryManager(TreeManager):
 
     def whole_tree(self):
         roots = self.filter(parent=None, is_visible=True)
-        return reduce(lambda x, y: x | y, (root.get_visible_descendants() for root in roots))
+        if roots.exists():
+            return reduce(lambda x, y: x | y, (root.get_visible_descendants() for root in roots))
+        else:
+            return roots
 
     def show_subtree(self, include_self=True, from_node=None, depth=None):
         """
